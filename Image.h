@@ -13,7 +13,6 @@ class Image
 public:
     SDL_Texture* Tex;
 	SDL_Rect Frame;
-
 	Image()
 	{
 	    Tex = NULL;
