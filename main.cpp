@@ -110,4 +110,28 @@ int main(int argc, char* argv[])
 		close();
 		return 0;
 	}
+	int open_game_time = SDL_GetTicks();
+
+    SDL_RenderClear(renderer);
+    Background_logo.Render(renderer);
+
+    while (intro)
+	{
+		int current_opengame_time = SDL_GetTicks();
+		while (SDL_PollEvent(&event))
+		{
+			if (event.type == SDL_QUIT)
+			{
+				intro = false;
+				game_Running = false;
+			}
+		}
+		if (current_opengame_time - open_game_time > 2500)
+		{
+			intro = false;
+			game_Running = true;
+			main_menu = true;
+		}
+		SDL_RenderPresent(renderer);
+	}
 }
