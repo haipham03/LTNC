@@ -134,4 +134,66 @@ int main(int argc, char* argv[])
 		}
 		SDL_RenderPresent(renderer);
 	}
+	while (game_Running)
+	{
+		while (main_menu)
+		{
+			SDL_RenderClear(renderer);
+			while (SDL_PollEvent(&event))
+			{
+				switch (event.type)
+				{
+				case SDL_QUIT:
+					main_menu = false;
+					start_game = false;
+					game_Running = false;
+				case SDL_KEYDOWN:
+					switch (event.key.keysym.sym)
+					{
+					case SDLK_UP:
+						if (!menu_selected) menu--;
+						break;
+					case SDLK_DOWN:
+						if (!menu_selected) menu++;
+						break;
+					case SDLK_s:
+						menu_selected = true;
+						break;
+					case SDLK_y:
+						menu_selected = false;
+						break;
+					default:
+						break;
+					}
+				}
+			}
+			if (menu > EXIT) menu = PLAY;
+			if (menu < PLAY) menu = EXIT;
+			if (menu_selected == false)
+			{
+				Background_menu.Render(renderer);
+				Arrow_Selected.set_Y(240 + menu * 100);
+				Arrow_Selected.Render(renderer);
+			}
+			else
+			{
+				switch (menu)
+				{
+				case PLAY:
+					main_menu = false;
+					start_game = true;
+					menu_selected = false;
+					break;
+				case INSTRUCTION:
+					Instructions.Render(renderer);
+					break;
+				case EXIT:
+					main_menu = false;
+					start_game = false;
+					game_Running = false;
+					break;
+				}
+			}
+			SDL_RenderPresent(renderer);
+		}
 }
