@@ -15,10 +15,6 @@ public:
         y_speed = 1;
         angle = 0;
 	}
-	~Asteroid()
-	{
-	    Image::Free();
-	}
 	int get_speed_x()
 	{
 		return x_speed;
