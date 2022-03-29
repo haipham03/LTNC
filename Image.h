@@ -45,10 +45,6 @@ public:
         image = NULL;
         return true;
 	}
-	void Render(SDL_Renderer* G_Renderer)
-	{
-	    SDL_RenderCopy(G_Renderer, Tex, NULL, &Frame);
-	}
 	SDL_Rect Get_Rect()
 	{
 		return Frame;
@@ -69,12 +65,8 @@ public:
 	{
 		Frame.y = _y;
 	}
-	void Free()
+	void Render(SDL_Renderer* G_Renderer)
 	{
-        if (Tex != NULL)
-        {
-            SDL_DestroyTexture(Tex);
-            Tex = NULL;
-        }
+	    SDL_RenderCopy(G_Renderer, Tex, NULL, &Frame);
 	}
 };
