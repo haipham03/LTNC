@@ -194,4 +194,26 @@ int main(int argc, char* argv[])
 			}
 			SDL_RenderPresent(renderer);
 		}
+	while (start_game)
+	{
+		while (SDL_PollEvent(&event))
+		{
+			if (event.type == SDL_QUIT)
+			{
+				start_game = false;
+				game_Running = false;
+			}
+			if (event.type == SDL_MOUSEBUTTONDOWN)
+			{
+				if (event.button.button == SDL_BUTTON_LEFT)
+				{
+					Playing = true;
+					start_game = false;
+				}
+			}
+		}
+		SDL_RenderClear(renderer);
+		Render_Center(renderer, 0, sin(SDL_GetTicks() / 100), "CLICK TO START", font_24, White);
+		SDL_RenderPresent(renderer);
+	}
 }
