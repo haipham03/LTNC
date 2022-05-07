@@ -1,7 +1,8 @@
 #include "Image.h"
+#include "Asteroid.h"
+#include "Spaceship.h"
+#include "Bullet.h"
 #include "Use.h"
-
-using namespace std;
 
 bool Init_All()
 {
@@ -23,18 +24,32 @@ bool Init_All()
 	}
 	window = SDL_CreateWindow("Astro", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 	if (window == nullptr)
-    	{
-       		logSDLError(cout, "CreateWindow", true);
-        	return false;
-    	}
-    	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    	if (renderer == NULL)
-    	{
-        	cout << "Failed to create window: " << SDL_GetError() << endl;
-        	return false;
-    	}
+    {
+        logSDLError(cout, "CreateWindow", true);
+        return false;
+    }
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (renderer == NULL)
+    {
+        cout << "Failed to create window: " << SDL_GetError() << endl;
+        return false;
+    }
 	return true;
 }
+
+void close()
+{
+	SDL_DestroyRenderer(renderer);
+	renderer = NULL;
+
+	SDL_DestroyWindow(window);
+	window = NULL;
+
+	SDL_Quit();
+	IMG_Quit();
+	TTF_Quit();
+}
+
 
 bool Load_Asteroids(const char* file_path)
 {
@@ -84,36 +99,136 @@ bool Load()
 	if (!Load_Asteroids("Game_BG/Big_Asteroid.png")) return false;
 	if (!Load_Asteroids("Game_BG/Medium_Asteroid.png")) return false;
 	if (!Load_Asteroids("Game_BG/Small_Asteroid.png")) return false;
+	Arrow_Selected.set_X(400); /// set x_cordinate
+	Player_Spaceship.set_velocity(PLAYER_VELOCITY);
+	Player_Spaceship.set_Bullet_dmg(PLAYER_BULLET_DAMAGE);
+	Player_Spaceship.set_HP(PLAYER_HP);
+	return true;
 }
 
-void close()
+void Remove_Asteroid(vector<Asteroid*>& Cur_Asteroid, int& idx)
 {
-	SDL_DestroyRenderer(renderer);
-	renderer = NULL;
+	if (idx <= Cur_Asteroid.size())
+	{
+		Asteroid* current_Asteroid = Cur_Asteroid.at(idx);
+		Cur_Asteroid.erase(Cur_Asteroid.begin() + idx);
+		if (current_Asteroid != NULL)
+		{
+			delete current_Asteroid;
+			current_Asteroid = NULL;
+		}
+	}
 
-	SDL_DestroyWindow(window);
-	window = NULL;
+}
 
-	SDL_Quit();
-	IMG_Quit();
-	TTF_Quit();
+void Render_Asteroid(vector<Asteroid*>& Cur_Asteroid)
+{
+	for (int i = 0; i < Cur_Asteroid.size(); i++) Cur_Asteroid[i]->Render(renderer);
+}
+
+void Reset_Game()
+{
+	int i=0;
+	while(Big_Asteroids.size() > 0) Remove_Asteroid(Big_Asteroids, i);
+	while(Medium_Asteroids.size() > 0) Remove_Asteroid(Medium_Asteroids, i);
+	while(Small_Asteroids.size() > 0) Remove_Asteroid(Small_Asteroids, i);
+	while(Player_Spaceship.get_Bullets().size() > 0) Player_Spaceship.remove_Bullets(i);
+	Player_Spaceship.Reset();
+	Player_Spaceship.set_velocity(PLAYER_VELOCITY);
+	Player_Spaceship.set_Bullet_dmg(PLAYER_BULLET_DAMAGE);
+	Player_Spaceship.set_HP(PLAYER_HP);
+}
+
+bool Add_Asteroid(int i)
+{
+    bool Playing = true;
+    Asteroid* cur_Asteroid = new Asteroid;
+    cur_Asteroid->set_X(rand() % 1000);
+    cur_Asteroid->set_Y(rand() % 50 - 50);
+    cur_Asteroid->set_HP(HP_Asteroid[i]);
+    switch (i)
+    {
+        case 0:
+        {
+            cur_Asteroid->Load_Image("Game_BG/Big_Asteroid.png", renderer);
+            Big_Asteroids.push_back(cur_Asteroid);
+            break;
+        }
+        case 1:
+        {
+            cur_Asteroid->Load_Image("Game_BG/Medium_Asteroid.png", renderer);
+            Medium_Asteroids.push_back(cur_Asteroid);
+            break;
+        }
+        case 2:
+        {
+            cur_Asteroid->Load_Image("Game_BG/Small_Asteroid.png", renderer);
+            Small_Asteroids.push_back(cur_Asteroid);
+            break;
+        }
+    }
+    return Playing;
+}
+
+
+bool CheckBullet(int type,vector<Asteroid*>& Cur_Asteroid,int idx,int &player_score)
+{
+    for (int cnt = 0; cnt < Cur_Asteroid.size(); cnt++)
+    {
+        if (Check_Collision(Player_Spaceship.get_Bullets()[idx]->Get_Rect(), Cur_Asteroid[cnt]->Get_Rect()))
+        {
+            Player_Spaceship.remove_Bullets(idx);
+            Cur_Asteroid[cnt]->Attacked(Player_Spaceship.get_Bullet_dmg());
+            if (Cur_Asteroid[cnt]->get_current_HP() <= 0)
+            {
+                player_score += SCORE_Asteroid[type];
+                if (type != 2) for (int spawn = 0; spawn < 2; spawn++) Add_Asteroid(type+1);
+                Remove_Asteroid(Cur_Asteroid, cnt);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+bool checkSpaceship(int type,vector<Asteroid*>& Cur_Asteroid,int &player_score)
+{
+    for (int cnt = 0; cnt < Cur_Asteroid.size(); cnt++)
+    {
+        if (Check_Collision(Player_Spaceship.Get_Rect(), Cur_Asteroid[cnt]->Get_Rect()))
+        {
+            player_score += SCORE_Asteroid[type];
+            Player_Spaceship.Get_Damage(DAMAGE_Asteroid[type]);
+            if (type != 2) for (int spawn = 0; spawn < 2; spawn++) Add_Asteroid(type+1);
+            Remove_Asteroid(Cur_Asteroid, cnt);
+            if (Player_Spaceship.get_current_HP() <= 0) return false;
+            break;
+        }
+    }
+    return true;
 }
 
 int main(int argc, char* argv[])
 {
-	srand(time(NULL));
 	if (!Init_All())
 	{
 		cout << "ERROR!!" << endl;
 		close();
 		return 0;
 	}
+	if (!Load())
+	{
+		cout << "Can't load!" << endl;
+		close();
+		return 0;
+	}
+
 	int open_game_time = SDL_GetTicks();
 
     SDL_RenderClear(renderer);
     Background_logo.Render(renderer);
 
-    while (intro)
+	while (intro)
 	{
 		int current_opengame_time = SDL_GetTicks();
 		while (SDL_PollEvent(&event))
@@ -132,6 +247,8 @@ int main(int argc, char* argv[])
 		}
 		SDL_RenderPresent(renderer);
 	}
+
+
 	while (game_Running)
 	{
 		while (main_menu)
