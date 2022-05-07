@@ -194,26 +194,144 @@ int main(int argc, char* argv[])
 			}
 			SDL_RenderPresent(renderer);
 		}
-	while (start_game)
-	{
-		while (SDL_PollEvent(&event))
+
+		//load start game renderer
+		while (start_game)
 		{
-			if (event.type == SDL_QUIT)
+			while (SDL_PollEvent(&event))
 			{
-				start_game = false;
-				game_Running = false;
-			}
-			if (event.type == SDL_MOUSEBUTTONDOWN)
-			{
-				if (event.button.button == SDL_BUTTON_LEFT)
+				if (event.type == SDL_QUIT)
 				{
-					Playing = true;
 					start_game = false;
+					game_Running = false;
+				}
+				if (event.type == SDL_MOUSEBUTTONDOWN)
+				{
+					if (event.button.button == SDL_BUTTON_LEFT)
+					{
+						Playing = true;
+						start_game = false;
+					}
 				}
 			}
+			SDL_RenderClear(renderer);
+			Render_Center(renderer, 0, sin(SDL_GetTicks() / 100), "CLICK TO START", font_24, White);
+			SDL_RenderPresent(renderer);
 		}
-		SDL_RenderClear(renderer);
-		Render_Center(renderer, 0, sin(SDL_GetTicks() / 100), "CLICK TO START", font_24, White);
-		SDL_RenderPresent(renderer);
+
+		int start_game_time = SDL_GetTicks();
+
+		int time_new_asteroid = SDL_GetTicks();
+
+		int current_time = SDL_GetTicks();
+
+		int player_score = 0;
+
+
+		//load playing renderer
+		while (Playing)
+		{
+			SDL_RenderClear(renderer);
+			Playing_Background.Render(renderer);
+			while (SDL_PollEvent(&event))
+			{
+				if (event.type == SDL_QUIT)
+				{
+					Playing = false;
+					game_Running = false;
+				}
+				Player_Spaceship.Handle_Event(event);
+			}
+
+			Player_Spaceship.Move(renderer);
+
+			//Collision between bullets and asteroids
+			for (int i = 0; i < Player_Spaceship.get_Bullets().size(); i++)
+			{
+				if(CheckBullet(BIG,Big_Asteroids,i,player_score)) continue;
+				if(CheckBullet(MEDIUM,Medium_Asteroids,i,player_score)) continue;
+				if(CheckBullet(SMALL,Small_Asteroids,i,player_score)) continue;
+			}
+
+			//Collision between spaceship and asteroids
+			bool ck_Big = checkSpaceship(BIG,Big_Asteroids,player_score);
+			bool ck_Med = checkSpaceship(MEDIUM,Medium_Asteroids,player_score);
+			bool ck_Small = checkSpaceship(SMALL,Small_Asteroids,player_score);
+			if(!ck_Big||!ck_Med||!ck_Small)
+            {
+                Playing = false;
+                Death_menu = true;
+            }
+
+
+			//Add new asteroid
+			current_time = SDL_GetTicks();
+			if (current_time - time_new_asteroid > SPAWN_ASTEROID_TIME)
+			{
+				player_score += SURVIVAL_SCORE;
+				time_new_asteroid = SDL_GetTicks();
+				int i = rand() % 3;
+				Playing = Add_Asteroid(i);
+            }
+
+			const string current_hp = to_string(Player_Spaceship.get_current_HP());
+
+			//render hp number
+			Render_Message(renderer, 1210, 50, current_hp.c_str(), font_24, White);
+
+			//render HP
+			SDL_Rect fillRect = { 900, 50, 300 * Player_Spaceship.get_current_HP() / Player_Spaceship.get_max_HP(), 20 };
+			SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
+			SDL_RenderFillRect(renderer, &fillRect);
+
+			//render HP border
+			SDL_Rect outlineRect = { 900, 50, 300, 20 };
+			SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+			SDL_RenderDrawRect(renderer, &outlineRect);
+
+			//black raw renderer
+			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
+			string currentScore = "SCORE: " + to_string(player_score);
+			Render_Message(renderer, 900, 100, currentScore.c_str(), font_24, White);
+
+			Render_Asteroid(Big_Asteroids);
+			Render_Asteroid(Medium_Asteroids);
+			Render_Asteroid(Small_Asteroids);
+			Player_Spaceship.Render(renderer);
+			SDL_RenderPresent(renderer);
+		}
+		int death_start_time = SDL_GetTicks();
+		string player_total_score = "YOUR SCORE: " + to_string(player_score);
+		while (Death_menu)
+		{
+			while (SDL_PollEvent(&event))
+			{
+				if (event.type == SDL_QUIT)
+				{
+					Death_menu = false;
+					game_Running = false;
+				}
+			}
+			int death_current_time = SDL_GetTicks();
+			if (death_current_time - death_start_time < 3000)
+			{
+				SDL_RenderClear(renderer);
+				//render score string
+				Render_Message(renderer, 527, 400 + sin(SDL_GetTicks() / 100), player_total_score.c_str(), font_24, White);
+				//render dead message
+				Render_Center(renderer, 0, sin(SDL_GetTicks() / 100), "GAME OVER!", font_32, White);
+				SDL_RenderPresent(renderer);
+			}
+			else
+			{
+                Death_menu = false;
+                main_menu = true;
+                Reset_Game();
+			}
+		}
+
 	}
+	close();
+	return 0;
 }
