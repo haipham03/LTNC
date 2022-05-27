@@ -2,6 +2,7 @@
 
 #include "Image.h"
 #include "Bullet.h"
+#include<SDL_mixer.h>
 class Spaceship :public Image
 {
 public:
@@ -40,7 +41,7 @@ public:
         Bullet_dmg = 0;
 	}
 	void Render(SDL_Renderer* G_Renderer);
-	void Handle_Event(SDL_Event& p_Event);
+	bool Handle_Event(SDL_Event& p_Event);
 	void Move(SDL_Renderer* G_Renderer);
 	void Reset();
 	void set_Bullets(const vector<Bullet*>& bullets)
@@ -112,8 +113,9 @@ void Spaceship::Render(SDL_Renderer* G_Renderer)
 	}
 }
 
-void Spaceship::Handle_Event(SDL_Event& p_Event)
+bool Spaceship::Handle_Event(SDL_Event& p_Event)
 {
+    bool pause = false;
 	if (p_Event.type == SDL_KEYDOWN)
 	{
 		switch (p_Event.key.keysym.sym)
@@ -133,6 +135,9 @@ void Spaceship::Handle_Event(SDL_Event& p_Event)
 		case SDLK_s:
 			key_S = true;
 			break;
+        case SDLK_y:
+            pause = true;
+            break;
 		}
 	}
 	else if (p_Event.type == SDL_KEYUP)
@@ -156,6 +161,7 @@ void Spaceship::Handle_Event(SDL_Event& p_Event)
 			break;
 		}
 	}
+	return pause;
 }
 
 void Spaceship::remove_Bullets(int& i)
@@ -179,11 +185,13 @@ void Spaceship::Move(SDL_Renderer* G_Renderer)
 	{
 		if (Lock_shot == false)
 		{
+            Mix_Chunk* fire = Mix_LoadWAV("Game_BG/fire.wav");
+            Mix_PlayChannel(-1, fire, 0);
 			Shoot++;
 			Bullet* Bullets_i = new Bullet();
 			Bullets_i->Load_Image("Game_BG/Bullet.png", G_Renderer);
 			Bullets_i->set_X(Frame.x + Frame.w / 2  + sin(angle * (2 * 3.14) / 360));
-			Bullets_i->set_Y(Frame.y + Frame.w / 2 - cos(angle * (2 * 3.14) / 360));
+			Bullets_i->set_Y(Frame.y + Frame.h / 2 - cos(angle * (2 * 3.14) / 360));
 			Bullets_i->set_angle(angle);
 			Bullets_i->set_velocity(velocity * 2);
 			Bullets.push_back(Bullets_i);
