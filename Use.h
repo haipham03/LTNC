@@ -2,6 +2,7 @@
 #include<SDL.h>
 #include<SDL_image.h>
 #include<SDL_ttf.h>
+#include<SDL_mixer.h>
 
 using namespace std;
 
@@ -26,7 +27,8 @@ const int PLAYER_VELOCITY = 3;
 
 const int PLAY = 0;
 const int INSTRUCTION = 1;
-const int EXIT = 2;
+const int HIGH_SCORE = 2;
+const int EXIT = 3;
 
 vector<Asteroid*> Big_Asteroids;
 vector<Asteroid*> Medium_Asteroids;
@@ -42,6 +44,7 @@ Image Instructions;
 
 TTF_Font* font_32;
 TTF_Font* font_24;
+Mix_Chunk* chunk = NULL;
 
 SDL_Color White = {255,255,255};
 SDL_Window* window = NULL;
@@ -56,6 +59,10 @@ bool Death_menu = false;
 bool Playing = false;
 int menu = PLAY;
 bool menu_selected = false;
+
+int NUM_HS = 5;
+
+vector<int> player_high_score(NUM_HS);
 
 void logSDLError(ostream& os, const string &msg, bool fatal)
 {
