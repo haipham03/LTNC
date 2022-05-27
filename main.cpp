@@ -4,6 +4,7 @@
 #include "Bullet.h"
 #include "Use.h"
 
+
 bool Init_All()
 {
 	int img_flags = IMG_INIT_PNG;
@@ -66,6 +67,7 @@ bool Load()
 {
 	font_32 = TTF_OpenFont("Game_BG/Font.ttf", 32);
 	font_24 = TTF_OpenFont("Game_BG/Font.ttf", 24);
+
 	if (!Background_logo.Load_Image("Game_BG/Background_logo.png", renderer))
 	{
 		cout << "Background Logo error!" << endl;
@@ -99,7 +101,21 @@ bool Load()
 	if (!Load_Asteroids("Game_BG/Big_Asteroid.png")) return false;
 	if (!Load_Asteroids("Game_BG/Medium_Asteroid.png")) return false;
 	if (!Load_Asteroids("Game_BG/Small_Asteroid.png")) return false;
-	Arrow_Selected.set_X(400); /// set x_cordinate
+
+	if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) == -1)
+	{
+		cout<<Mix_GetError();
+		return false;
+	}
+
+	//Load Sound Effect
+	chunk = Mix_LoadWAV("Game_BG/sound.wav");
+	if (chunk == NULL)
+	{
+		cout<<Mix_GetError();
+		return false;
+	}
+
 	Player_Spaceship.set_velocity(PLAYER_VELOCITY);
 	Player_Spaceship.set_Bullet_dmg(PLAYER_BULLET_DAMAGE);
 	Player_Spaceship.set_HP(PLAYER_HP);
@@ -227,7 +243,6 @@ int main(int argc, char* argv[])
 
     SDL_RenderClear(renderer);
     Background_logo.Render(renderer);
-
 	while (intro)
 	{
 		int current_opengame_time = SDL_GetTicks();
@@ -247,7 +262,6 @@ int main(int argc, char* argv[])
 		}
 		SDL_RenderPresent(renderer);
 	}
-
 
 	while (game_Running)
 	{
@@ -287,6 +301,7 @@ int main(int argc, char* argv[])
 			if (menu_selected == false)
 			{
 				Background_menu.Render(renderer);
+				Arrow_Selected.set_X(400);
 				Arrow_Selected.set_Y(240 + menu * 100);
 				Arrow_Selected.Render(renderer);
 			}
@@ -301,6 +316,14 @@ int main(int argc, char* argv[])
 					break;
 				case INSTRUCTION:
 					Instructions.Render(renderer);
+					break;
+                case HIGH_SCORE:
+					for (int i = 0; i < NUM_HS ; i++)
+					{
+						string top_score = to_string(player_high_score[i]);
+						string show_top_score = "PLAYER " + to_string(i + 1) + ":       " + top_score;
+						Render_Message(renderer, 515, 200 + i * 50, show_top_score.c_str(), font_24, White);
+					}
 					break;
 				case EXIT:
 					main_menu = false;
@@ -346,10 +369,34 @@ int main(int argc, char* argv[])
 
 
 		//load playing renderer
+		Mix_Chunk* Music = Mix_LoadWAV("Game_BG/ok.wav");
+        Mix_PlayChannel(-1, Music, 0);
+
+		bool Paused = false;
 		while (Playing)
 		{
+		    while(Paused)
+            {
+                while (SDL_PollEvent(&event))
+                {
+                    if (event.type == SDL_QUIT)
+                    {
+                        Paused = false;
+                        Playing = false;
+                        game_Running = false;
+                    }
+                    if (event.type == SDL_MOUSEBUTTONDOWN)
+                    {
+                        if (event.button.button == SDL_BUTTON_RIGHT) Paused = false;
+                    }
+                }
+                SDL_RenderClear(renderer);
+                Render_Center(renderer, 0, sin(SDL_GetTicks() / 100), "RIGHT CLICK TO RESUME", font_24, White);
+                SDL_RenderPresent(renderer);
+            }
 			SDL_RenderClear(renderer);
 			Playing_Background.Render(renderer);
+			int BackToMenu = 0;
 			while (SDL_PollEvent(&event))
 			{
 				if (event.type == SDL_QUIT)
@@ -357,9 +404,21 @@ int main(int argc, char* argv[])
 					Playing = false;
 					game_Running = false;
 				}
-				Player_Spaceship.Handle_Event(event);
+				if (event.type == SDL_MOUSEBUTTONDOWN)
+				{
+					if (event.button.button == SDL_BUTTON_RIGHT)
+					{
+						Paused = true;
+					}
+				}
+				BackToMenu |= Player_Spaceship.Handle_Event(event);
 			}
 
+			if(BackToMenu)
+            {
+                Playing = false;
+                Death_menu = true;
+            }
 			Player_Spaceship.Move(renderer);
 
 			//Collision between bullets and asteroids
@@ -379,8 +438,7 @@ int main(int argc, char* argv[])
                 Playing = false;
                 Death_menu = true;
             }
-
-
+            if(Death_menu) Mix_PlayChannel(-1, chunk, 0);
 			//Add new asteroid
 			current_time = SDL_GetTicks();
 			if (current_time - time_new_asteroid > SPAWN_ASTEROID_TIME)
@@ -412,6 +470,8 @@ int main(int argc, char* argv[])
 			string currentScore = "SCORE: " + to_string(player_score);
 			Render_Message(renderer, 900, 100, currentScore.c_str(), font_24, White);
 
+			//Render_Message(renderer, 900, 150, "PAUSE : RIGHT CLICK", font_24, White);
+
 			Render_Asteroid(Big_Asteroids);
 			Render_Asteroid(Medium_Asteroids);
 			Render_Asteroid(Small_Asteroids);
@@ -420,6 +480,28 @@ int main(int argc, char* argv[])
 		}
 		int death_start_time = SDL_GetTicks();
 		string player_total_score = "YOUR SCORE: " + to_string(player_score);
+
+		int player_top = 0;
+		for (player_top = 0; player_top < 5; player_top++)
+		{
+			if (player_score > player_high_score[player_top])
+			{
+				if (player_top == 4)
+				{
+					player_high_score[4] = player_score;
+				}
+				else
+				{
+					for (int i = player_high_score.size() - 1; i > player_top; i--)
+					{
+						player_high_score[i] = player_high_score[i - 1];
+					}
+					player_high_score[player_top] = player_score;
+				}
+				break;
+			}
+		}
+
 		while (Death_menu)
 		{
 			while (SDL_PollEvent(&event))
@@ -447,7 +529,7 @@ int main(int argc, char* argv[])
                 Reset_Game();
 			}
 		}
-
+        Mix_HaltChannel(-1);
 	}
 	close();
 	return 0;
